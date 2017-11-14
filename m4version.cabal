@@ -1,5 +1,5 @@
 name:                m4version
-version:             0.0.1
+version:             0.0.2
 -- synopsis:
 -- description:
 homepage:            https://github.com/agander/m4version#readme
@@ -23,7 +23,7 @@ source-repository head
   type:     git
   location: https://github.com/agander/m4version
 
-executable set_up_m4version
+executable setup_m4_version
   hs-source-dirs:      src
   main-is:             setup_m4_version.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
