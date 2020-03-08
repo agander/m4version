@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 module Main where
 
-import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as C8
 import System.Environment (getEnv, getProgName, getArgs)
 import System.Directory (listDirectory, doesDirectoryExist)
 --import Data.List.Split (splitOn)
@@ -10,27 +11,58 @@ import System.FilePath (splitFileName, (</>)) -- searchPathSeparator)
 import Control.Monad (forM, mapM, forM_, mapM_)
 import Data.Text
 import qualified Data.Text as T
+import Text.Printf
+import Data.Text.IO as TIO
 
+--import qualified Lib as L
 import Lib
+import System.TimeIt
+import System.Console.CmdArgs
+import Data.Version
 
---tokenise x y = h : if null t then [] else tokenise x (drop (length x) t)
---  where (h,t) = B.breakSubstring x y
+import Text.Regex.PCRE.Light
+
+version :: Version
+version = makeVersion [0,0,3]
+
+insomma :: Version -> String-> String
+insomma version str = str ++ " " ++ showVersion version
+
+newtype Owwica = Args{ search_criteria :: String }
+              deriving (Show, Data, Typeable)
+
+data VersionNums = Current 
+  | Revision
+  | Age
+  | Release                 
+  deriving (Show, Data, Typeable)
+
+cmd_args = Args{search_criteria = "ch"
+  } &= 
+  summary (insomma version "Version:") &= 
+  program "owwica" &=
+  -- verbosityArgs [ignore] [name "silent", explicit] &=
+  details ["More details on github.com/agander/setup_m4_version"] &=
+  help "setup_m4_version:Usage: stack [-?/--help] [-V/--version] [--numeric-version] [-v|--verbose] "
 
 main :: IO ()
 main = do
-  putStrLn ">>> COMMENT: inizio"
   prog <- getProgName
-  putStr ">>> COMMENT: arg[0]: ["
-  putStr prog
-  putStrLn "]"
   putNPrint "c" "inizio" prog
+  args <- cmdArgs cmd_args
+
+  Prelude.putStrLn ">>> COMMENT: args"
+  print =<< cmdArgs cmd_args
+  --printf "%s: %s\n" "search_criteria" (search_criteria args)
 
   args <- getArgs
+  --print $ parseOptions args
+
   --nomeficheiro <- return( args !! 0)
   --putStrLn ( "Name is" ++ nomeficheiro)
   --if length args > 0 then putStrLn args else purStrLn Nothing
   -- | Convert args to Text
-  let tArgs = map T.pack args
+  let tArgs = Prelude.map T.pack args
   mapM_ print args
 
   -- | global indicator to check if directory m4/ exists.
@@ -38,20 +70,31 @@ main = do
   haveM4 <- doesDirectoryExist "m4/"
   putNPrint "c" "Do we have m4/?: " haveM4
 
+  -- | Read in the m4/version.m4
+  ver_m4 <- TIO.readFile "m4/version.m4"
+
+  -- | Are the args args or values?
+  let areArgs = Prelude.filter isArg args
+  timeItNamed "args or values" $ mapM_ (putNPrint "c" "isArg: " . isArg) args
+
+  putNPrint  "c" "isSubseqOf \"123\" \"7654321\": " 
+    (isSubseqOf "123" "7654321")
 -- | Functions
 -- | Log message function
 --putNPrint :: Show a => Char -> String -> a -> IO ()
 putNPrint tipe msg var = do
   case tipe of
-      "c" -> putStr ">>> COMMENT: "
-      "C" -> putStr ">>> COMMENT: "
-      "w" -> putStr "!!! WARNING: "
-      "W" -> putStr "!!! WARNING: "
-      "e" -> putStr "*** ERROR:   "
-      "E" -> putStr "*** ERROR:   "
-      _   -> putStr ">>> INFO:    "
-  putStr msg
-  putStr " "
+      "c" -> Prelude.putStr ">>> COMMENT: "
+      "C" -> Prelude.putStr ">>> COMMENT: "
+      "w" -> Prelude.putStr "!!! WARNING: "
+      "W" -> Prelude.putStr "!!! WARNING: "
+      "e" -> Prelude.putStr "*** ERROR:   "
+      "E" -> Prelude.putStr "*** ERROR:   "
+      "t" -> Prelude.putStr "!!! TEST:    "
+      "T" -> Prelude.putStr "!!! TEST:    "
+      _   -> Prelude.putStr ">>> INFO:    "
+  Prelude.putStr msg
+  Prelude.putStr " "
   print var
 
 
@@ -61,4 +104,5 @@ putNPrint tipe msg var = do
 --printVersion :: 
 --printVersion = 
 
+name_maj_min_regex = compile $ C8.pack "define\\(\\[([A-Z_-]\\w+)\\],\\[(\\d+\\.\\d+)\\.(\\d+)\\]\\)dnl"
 
